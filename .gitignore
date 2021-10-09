@@ -1,0 +1,14 @@
+# Project exclude paths
+/.gradle/
+/.idea
+gradlew
+/gradlew.bat
+/Connect Four/task/build/
+/Connect Four/task/out/
+/Connect Four/task/out/production/classes/
+/Topics/Characters/Previous character/out/
+/Topics/Characters/Previous character/out/production/classes/
+/Topics/For loop and ranges/The longest sequence/out/
+/Topics/For loop and ranges/The longest sequence/out/production/classes/
+*jar
+*yaml
