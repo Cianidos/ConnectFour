@@ -18,16 +18,16 @@ sealed class Player {
         is One -> Two
         is Two -> One
     }
+
+    operator fun component1() = name
+    operator fun component2() = score
 }
 
 class GameSession {
     // TODO: seald Player1(name) Player2(name)
-    lateinit var firstPlayerName: String
-    lateinit var secondPlayerName: String
+    var currPlayer: Player = Player.One
     var totalGames = 1
     var currentGame = 1
-    var firstPlayerScore = 0
-    var secondPlayerScore = 0
 
     // TODO: separate OneGame and GameSession
     var height by Delegates.notNull<Int>()
@@ -72,18 +72,10 @@ class GameSession {
     // TODO merge sequential states
     private val Greetings = FunStates {
         println("Connect Four")
-        TakeFirstPlayerName
-    }
-
-    private val TakeFirstPlayerName = FunStates.FunStatesRun {
         println("First player's name:")
-        firstPlayerName = readLine()!!
-        TakeSecondPlayerName
-    }
-
-    private val TakeSecondPlayerName = FunStates.FunStatesRun {
+        Player.One.name = readLine()!!
         println("Second player's name:")
-        secondPlayerName = readLine()!!
+        Player.Two.name = readLine()!!
         OfferToChoseBoardSize
     }
 
@@ -156,7 +148,7 @@ class GameSession {
 
     private val Announcement = FunStates.FunStatesRun {
         println(
-            "$firstPlayerName VS $secondPlayerName\n" +
+            "${Player.One.name} VS ${Player.Two.name}\n" +
                     "$height X $width board"
         )
         if (totalGames != 1) {
@@ -172,80 +164,49 @@ class GameSession {
             println("Game #$currentGame")
         }
         printBoard()
-        AskFirstPlayer
+        AskCurrPlayer
     }
 
-    private val AskFirstPlayer = FunStates.FunStatesRun {
-        println("$firstPlayerName's turn:")
-        FirstPlayerTurnGet
+    private val AskCurrPlayer = FunStates.FunStatesRun {
+        println("${currPlayer.name}'s turn:")
+        CurrPlayerTurnGet
     }
 
     // TODO copy-pasted code parametrization
-    private val FirstPlayerTurnGet: FunStates = FunStates.FunStatesRun {
+    private val CurrPlayerTurnGet: FunStates = FunStates.FunStatesRun {
         val line = readLine()!!.trim()
         when (val result = Validation(this, line)) {
             is Validation.Error -> {
                 println(result.text)
-                AskFirstPlayer
+                AskCurrPlayer
             }
             is Validation.Ok -> {
-                if (currentGame % 2 != 0)
-                    putSign(result.column, 'o')
-                else
-                    putSign(result.column, '*')
-                printBoard()
-                when (val r = CheckWin(this, result.column)) {
-                    is CheckWin.Draw -> {
-                        firstPlayerScore += 1
-                        secondPlayerScore += 1
-                        println("It is a draw")
-                        EndOfGame
-                    }
-                    is CheckWin.Win -> {
-                        firstPlayerScore += 2
-                        println(r.text(firstPlayerName))
-                        EndOfGame
-                    }
-                    CheckWin.NotEnd
-                    -> AskSecondPlayer
+                val sig = when (currPlayer) {
+                    Player.One -> 'o'
+                    Player.Two -> '*'
                 }
-            }
-            is Validation.End -> EndOfGame
-        }
-    }
-    private val AskSecondPlayer = FunStates.FunStatesRun {
-        println("$secondPlayerName's turn:")
-        SecondPlayerTurnGet
-    }
-
-    private val SecondPlayerTurnGet: FunStates = FunStates.FunStatesRun {
-        val line = readLine()!!.trim()
-        when (val result = Validation(this, line)) {
-            is Validation.Error -> {
-                println(result.text)
-                AskSecondPlayer
-            }
-            is Validation.Ok -> {
-                if (currentGame % 2 != 0)
-                    putSign(result.column, '*')
-                else
-                    putSign(result.column, 'o')
-
+                putSign(result.column, sig)
                 printBoard()
                 when (val r = CheckWin(this, result.column)) {
                     is CheckWin.Draw -> {
+                        currPlayer++
+                        currPlayer = !currPlayer
+                        currPlayer++
+                        currPlayer = !currPlayer
                         println("It is a draw")
-                        firstPlayerScore += 1
-                        secondPlayerScore += 1
                         EndOfGame
                     }
                     is CheckWin.Win -> {
-                        secondPlayerScore += 2
-                        println(r.text(secondPlayerName))
+                        currPlayer++
+                        currPlayer++
+                        println(r.text(currPlayer.name))
                         EndOfGame
                     }
                     CheckWin.NotEnd
-                    -> AskFirstPlayer
+                    -> {
+                        currPlayer = !currPlayer
+                        AskCurrPlayer
+                    }
                 }
             }
             is Validation.End -> EndOfGame
@@ -258,30 +219,17 @@ class GameSession {
             return@FunStatesRun End
 
 
-        if (currentGame % 2 == 1)
-            println(
-                "Score\n" +
-                        "$firstPlayerName: $firstPlayerScore " +
-                        "$secondPlayerName: $secondPlayerScore"
-            )
-        else println(
-            "Score\n" +
-                    "$secondPlayerName: $secondPlayerScore " +
-                    "$firstPlayerName: $firstPlayerScore"
-        )
+        val (cName, cScore) = Player.One
+        val (oName, oScore) = Player.Two
+
+        println("Score\n$cName: $cScore $oName: $oScore")
 
         if (totalGames == currentGame) {
             return@FunStatesRun End
         }
         currentGame += 1
-        val tmp = firstPlayerName
-        firstPlayerName = secondPlayerName
-        secondPlayerName = tmp
 
-        val tmp1 = firstPlayerScore
-        firstPlayerScore = secondPlayerScore
-        secondPlayerScore = tmp1
-
+        currPlayer = !currPlayer
         StartOfGame
     }
 
@@ -302,7 +250,6 @@ fun interface FunStates {
             { fs ->
                 FunStates { it.fs() }
             }
-
     }
 }
 
