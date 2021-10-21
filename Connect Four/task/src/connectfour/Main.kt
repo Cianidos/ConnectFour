@@ -3,12 +3,15 @@ package connectfour
 import kotlin.properties.Delegates
 
 class Game {
+    // TODO: seald Player1(name) Player2(name)
     lateinit var firstPlayerName: String
     lateinit var secondPlayerName: String
     var totalGames = 1
     var currentGame = 1
     var firstPlayerScore = 0
     var secondPlayerScore = 0
+
+    // TODO: separate OneGame and GameSession
     var height by Delegates.notNull<Int>()
     var width by Delegates.notNull<Int>()
 
@@ -47,6 +50,9 @@ class Game {
     }
 }
 
+/* TODO: introduce states to OneGame and GameSession
+    reduce code repeats
+ */
 fun interface FunStates {
     operator fun invoke(game: Game): FunStates?
 
@@ -58,6 +64,7 @@ fun interface FunStates {
 
         val InitState = FunStates { Greetings }
 
+        // TODO merge sequential states
         private val Greetings = FunStates {
             println("Connect Four")
             TakeFirstPlayerName
@@ -76,8 +83,10 @@ fun interface FunStates {
         }
 
         private val OfferToChoseBoardSize = FunStatesRun {
-            println("Set the board dimensions (Rows x Columns)\n" +
-                    "Press Enter for default (6 x 7)")
+            println(
+                "Set the board dimensions (Rows x Columns)\n" +
+                        "Press Enter for default (6 x 7)"
+            )
             val res = readLine()!!.trim()
             when {
                 res == "" -> DefaultSize
@@ -123,13 +132,15 @@ fun interface FunStates {
         private val OfferToChooseMultipleGames = FunStatesRun {
             var answer: Int?
             while (true) {
-                println("Do you want to play single or multiple games?\n" +
-                        "For a single game, input 1 or press Enter\n" +
-                        "Input a number of games:")
+                println(
+                    "Do you want to play single or multiple games?\n" +
+                            "For a single game, input 1 or press Enter\n" +
+                            "Input a number of games:"
+                )
                 val line = readLine()!!
                 answer = line.toIntOrNull()
                 if (line.isBlank()) answer = 1
-                if (answer != null && answer > 0){
+                if (answer != null && answer > 0) {
                     break
                 }
                 println("Invalid input")
@@ -139,8 +150,10 @@ fun interface FunStates {
         }
 
         private val Announcement = FunStatesRun {
-            println("$firstPlayerName VS $secondPlayerName\n" +
-                    "$height X $width board")
+            println(
+                "$firstPlayerName VS $secondPlayerName\n" +
+                        "$height X $width board"
+            )
             if (totalGames != 1) {
                 println("Total $totalGames games")
             }
@@ -148,7 +161,7 @@ fun interface FunStates {
         }
         private val StartOfGame = FunStatesRun {
             initBoard()
-            if (totalGames == 1){
+            if (totalGames == 1) {
                 println("Single game")
             } else {
                 println("Game #$currentGame")
@@ -162,6 +175,7 @@ fun interface FunStates {
             FirstPlayerTurnGet
         }
 
+        // TODO copy-pasted code parametrization
         private val FirstPlayerTurnGet: FunStates = FunStatesRun {
             val line = readLine()!!.trim()
             when (val result = Validation(this, line)) {
@@ -175,7 +189,7 @@ fun interface FunStates {
                     else
                         putSign(result.column, '*')
                     printBoard()
-                    when(val r = CheckWin(this, result.column)){
+                    when (val r = CheckWin(this, result.column)) {
                         is CheckWin.Draw -> {
                             firstPlayerScore += 1
                             secondPlayerScore += 1
@@ -213,7 +227,7 @@ fun interface FunStates {
                         putSign(result.column, 'o')
 
                     printBoard()
-                    when(val r = CheckWin(this, result.column)){
+                    when (val r = CheckWin(this, result.column)) {
                         is CheckWin.Draw -> {
                             println("It is a draw")
                             firstPlayerScore += 1
@@ -233,18 +247,23 @@ fun interface FunStates {
             }
         }
 
+        // TODO extract logic from state
         private val EndOfGame = FunStatesRun {
             if (totalGames == 1)
                 return@FunStatesRun End
 
 
             if (currentGame % 2 == 1)
-                println("Score\n" +
-                    "$firstPlayerName: $firstPlayerScore " +
-                    "$secondPlayerName: $secondPlayerScore")
-            else println("Score\n" +
+                println(
+                    "Score\n" +
+                            "$firstPlayerName: $firstPlayerScore " +
+                            "$secondPlayerName: $secondPlayerScore"
+                )
+            else println(
+                "Score\n" +
                         "$secondPlayerName: $secondPlayerScore " +
-                        "$firstPlayerName: $firstPlayerScore")
+                        "$firstPlayerName: $firstPlayerScore"
+            )
 
             if (totalGames == currentGame) {
                 return@FunStatesRun End
@@ -270,16 +289,17 @@ fun interface FunStates {
 
 sealed class CheckWin {
     companion object {
-        operator fun invoke(game: Game, column: Int): CheckWin = game.board.run {
-            when {
-                Point(column, game.board[column]!!.lastIndex).haveFour(game)
-                -> Win
-                this.values.fold(true)
-                { acc, list -> acc && list.size == game.height }
-                -> Draw("It is a draw")
-                else -> NotEnd
+        operator fun invoke(game: Game, column: Int): CheckWin =
+            game.board.run {
+                when {
+                    Point(column, game.board[column]!!.lastIndex).haveFour(game)
+                    -> Win
+                    this.values.fold(true)
+                    { acc, list -> acc && list.size == game.height }
+                    -> Draw("It is a draw")
+                    else -> NotEnd
+                }
             }
-        }
     }
 
     object Win : CheckWin() {
@@ -321,16 +341,15 @@ sealed class Validation {
 }
 
 data class Point(val x: Int, val y: Int) {
-    fun getNear(game: Game): List<Point>
-        {
-            val l = List(3) { (x - 1)..(x + 1) }.flatten()
+    fun getNear(game: Game): List<Point> {
+        val l = List(3) { (x - 1)..(x + 1) }.flatten()
             .zip(((y - 1)..(y + 1)).flatMap { listOf(it, it, it) })
             .filter { it.first != x || it.second != y }
             .map { Point(it.first, it.second) }
             .filter { it.isOnBoard(game) }
             .toList()
-            return l
-        }
+        return l
+    }
 
     fun isOnBoard(game: Game) = game.board[x]?.getOrNull(y) != null
 
@@ -348,8 +367,8 @@ data class Point(val x: Int, val y: Int) {
     }
 
     fun haveFour(game: Game): Boolean = !getListOfFours(game)
-        .filter { it.filter { it2-> it2.isOnBoard(game) }.size == 4 }
-        .map { it.map { it2 -> game.board[it2.x]?.get(it2.y) } }
+        .filter { it.filter { it2 -> it2.isOnBoard(game) }.size == 4 }
+        .map { it.map { (x1, y1) -> game.board[x1]?.get(y1) } }
         .none { it.reduce { acc, c -> if (acc == c) acc else null } != null }
 }
 
