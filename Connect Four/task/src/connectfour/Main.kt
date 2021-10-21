@@ -42,11 +42,7 @@ class GameSession {
     }
 
     fun start() {
-        var state: FunStates? = InitState
-        loop@ while (true) {
-            state = state?.invoke(this)
-            if (state == null) break@loop
-        }
+        InitState()
     }
 
     fun putSign(column: Int, sign: Char) {
@@ -67,66 +63,69 @@ class GameSession {
         println(footer)
     }
 
-    val InitState = FunStates { Greetings }
+    fun InitState() {
+        Greetings()
+    }
 
-    // TODO merge sequential states
-    private val Greetings = FunStates {
+    fun Greetings() {
         println("Connect Four")
         println("First player's name:")
         Player.One.name = readLine()!!
         println("Second player's name:")
         Player.Two.name = readLine()!!
-        OfferToChoseBoardSize
+        OfferToChoseBoardSize()
     }
 
-    private val OfferToChoseBoardSize = FunStates.FunStatesRun {
+    fun OfferToChoseBoardSize() {
         println(
             "Set the board dimensions (Rows x Columns)\n" +
                     "Press Enter for default (6 x 7)"
         )
         val res = readLine()!!.trim()
         when {
-            res == "" -> DefaultSize
+            res == "" -> DefaultSize()
             !("[0-9]+\\s*[xX]\\s*[0-9]+".toRegex().matches(res))
-            -> InvalidInput
+            -> InvalidInput()
             else -> {
                 val arr = res.split("[xX]".toRegex())
                     .map { it1 -> it1.trim().toInt() }
                 height = arr[0]
                 width = arr[1]
                 when {
-                    height !in 5..9 -> IncorrectRowSize
-                    width !in 5..9 -> IncorrectColumnSize
-                    else -> CorrectSize
+                    height !in 5..9 -> IncorrectRowSize()
+                    width !in 5..9 -> IncorrectColumnSize()
+                    else -> CorrectSize()
                 }
             }
         }
     }
 
-    private val DefaultSize = FunStates.FunStatesRun {
+    fun DefaultSize() {
         height = 6
         width = 7
-        OfferToChooseMultipleGames
+        OfferToChooseMultipleGames()
     }
 
-    private val CorrectSize = FunStates { OfferToChooseMultipleGames }
+    fun CorrectSize() {
+        OfferToChooseMultipleGames()
+    }
 
-    private val IncorrectRowSize: FunStates = FunStates {
+    fun IncorrectRowSize() {
         println("Board rows should be from 5 to 9")
-        OfferToChoseBoardSize
+        OfferToChoseBoardSize()
     }
 
-    private val IncorrectColumnSize: FunStates = FunStates {
+    fun IncorrectColumnSize() {
         println("Board columns should be from 5 to 9")
-        OfferToChoseBoardSize
+        OfferToChoseBoardSize()
     }
 
-    private val InvalidInput: FunStates = FunStates {
+    fun InvalidInput() {
         println("Invalid input")
-        OfferToChoseBoardSize
+        OfferToChoseBoardSize()
     }
 
-    private val OfferToChooseMultipleGames = FunStates.FunStatesRun {
+    fun OfferToChooseMultipleGames() {
         var answer: Int?
         while (true) {
             println(
@@ -143,20 +142,21 @@ class GameSession {
             println("Invalid input")
         }
         totalGames = answer!!
-        Announcement
+        Announcement()
     }
 
-    private val Announcement = FunStates.FunStatesRun {
+    fun Announcement() {
         println(
-            "${Player.One.name} VS ${Player.Two.name}\n" +
-                    "$height X $width board"
+            """${Player.One.name} VS ${Player.Two.name}
+               $height X $width board""".trimIndent()
         )
         if (totalGames != 1) {
             println("Total $totalGames games")
         }
-        StartOfGame
+        StartOfGame()
     }
-    private val StartOfGame = FunStates.FunStatesRun {
+
+    fun StartOfGame() {
         initBoard()
         if (totalGames == 1) {
             println("Single game")
@@ -164,21 +164,20 @@ class GameSession {
             println("Game #$currentGame")
         }
         printBoard()
-        AskCurrPlayer
+        AskCurrPlayer()
     }
 
-    private val AskCurrPlayer = FunStates.FunStatesRun {
+    fun AskCurrPlayer() {
         println("${currPlayer.name}'s turn:")
-        CurrPlayerTurnGet
+        CurrPlayerTurnGet()
     }
 
-    // TODO copy-pasted code parametrization
-    private val CurrPlayerTurnGet: FunStates = FunStates.FunStatesRun {
+    fun CurrPlayerTurnGet() {
         val line = readLine()!!.trim()
         when (val result = Validation(this, line)) {
             is Validation.Error -> {
                 println(result.text)
-                AskCurrPlayer
+                AskCurrPlayer()
             }
             is Validation.Ok -> {
                 val sig = when (currPlayer) {
@@ -194,62 +193,46 @@ class GameSession {
                         currPlayer++
                         currPlayer = !currPlayer
                         println("It is a draw")
-                        EndOfGame
+                        EndOfGame()
                     }
                     is CheckWin.Win -> {
                         currPlayer++
                         currPlayer++
                         println(r.text(currPlayer.name))
-                        EndOfGame
+                        EndOfGame()
                     }
                     CheckWin.NotEnd
                     -> {
                         currPlayer = !currPlayer
-                        AskCurrPlayer
+                        AskCurrPlayer()
                     }
                 }
             }
-            is Validation.End -> EndOfGame
+            is Validation.End -> EndOfGame()
         }
     }
 
-    // TODO extract logic from state
-    private val EndOfGame = FunStates.FunStatesRun {
+    fun EndOfGame() {
         if (totalGames == 1)
-            return@FunStatesRun End
-
+            return End()
 
         val (cName, cScore) = Player.One
         val (oName, oScore) = Player.Two
 
         println("Score\n$cName: $cScore $oName: $oScore")
 
-        if (totalGames == currentGame) {
-            return@FunStatesRun End
-        }
+        if (totalGames == currentGame)
+            return End()
+
         currentGame += 1
 
         currPlayer = !currPlayer
-        StartOfGame
+        StartOfGame()
     }
 
-    private val End = FunStates {
+    fun End() {
         println("Game over!")
         null
-    }
-}
-
-/* TODO: introduce states to OneGame and GameSession
-    reduce code repeats
- */
-fun interface FunStates {
-    operator fun invoke(gameSession: GameSession): FunStates?
-
-    companion object {
-        val FunStatesRun: (GameSession.() -> FunStates) -> FunStates =
-            { fs ->
-                FunStates { it.fs() }
-            }
     }
 }
 
